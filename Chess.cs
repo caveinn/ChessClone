@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Mime;
+using System.Security.Principal;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -13,7 +15,10 @@ namespace Chess
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private Point GameBounds = new Point(720, 720); // Game resolutions
-        private int Padding = 20;
+        private int tileWidth;
+        const int Padding = 20;
+        private bool PieceIsSelected = false;
+        
 
         public Texture2D Texture;
 
@@ -28,6 +33,18 @@ namespace Chess
             public Texture2D texture { get; set; }
 
             public string name { get; set; }
+            
+            public bool isSelected { get; set; }
+
+            public bool isDragged { get; set; }
+
+            public int boardX { get; set; }
+            public int boardY { get; set; }
+
+            public void drawPiece(SpriteBatch _spriteBatch, int tileWidth)
+            {
+                _spriteBatch.Draw(this.texture, new Rectangle(this.X, this.Y , tileWidth, tileWidth), this.isSelected ? Color.Red : Color.White);
+            }
         }
 
         private class Pawn : Piece { 
@@ -86,36 +103,54 @@ namespace Chess
             _graphics.PreferredBackBufferHeight = GameBounds.Y;
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            tileWidth = (GameBounds.X - Padding * 2) / 8;
         }
 
         private List<Piece> initilaizePieces(Side side)
         {
             int pieceRow = side == Side.white ? 0 : 7;
             int pawnRow = side == Side.white ? 1 : 6;
+            int pieceRowLocation = Padding + pieceRow * tileWidth;
             Piece King = new King();
-            King.X = 4;
-            King.Y = pieceRow;
+            King.X = Padding + 4 * tileWidth;
+            King.boardX = 4;
+            King.Y = pieceRowLocation;
+            King.boardY = pieceRow;
             Piece Queen = new Queen();
-            Queen.X = 3;
-            Queen.Y = pieceRow;
+            Queen.X = Padding + 3 * tileWidth;
+            Queen.boardX = 3;
+            Queen.Y = pieceRowLocation;
+            Queen.boardY = pieceRow;
             Piece Bishop = new Bishop();
-            Bishop.X = 2;
-            Bishop.Y = pieceRow;
+            Bishop.X = Padding + 2 * tileWidth;
+            Bishop.boardX = 2;
+            Bishop.Y = pieceRowLocation;
+            Bishop.boardY = pieceRow;
             Piece Bishop2 = new Bishop();
-            Bishop2.X = 5;
-            Bishop2.Y = pieceRow;
+            Bishop2.X = Padding + 5 * tileWidth;
+            Bishop2.boardX = 5;
+            Bishop2.Y = pieceRowLocation;
+            Bishop2.boardY = pieceRow;
             Piece Knight = new Knight();
-            Knight.X = 6;
-            Knight.Y = pieceRow;
+            Knight.X = Padding + 6 * tileWidth;
+            Knight.boardX = 6;  
+            Knight.Y = pieceRowLocation;
+            Knight.boardY = pieceRow;
             Piece Knight2 = new Knight();
-            Knight2.X = 1;
-            Knight2.Y = pieceRow;
+            Knight2.X = Padding + 1 * tileWidth;
+            Knight2.boardX = 1;
+            Knight2.Y = pieceRowLocation;
+            Knight2.boardY = pieceRow;
             Piece Rook = new Rook();
-            Rook.X = 7;
-            Rook.Y = pieceRow;
+            Rook.X = Padding + 7 * tileWidth;
+            Rook.boardX = 7;
+            Rook.Y = pieceRowLocation;
+            Rook.boardY = pieceRow;
             Piece Rook2 = new Rook();
-            Rook2.X = 0;
-            Rook2.Y = pieceRow;
+            Rook2.X = Padding  +  0;
+            Rook2.boardX = 0;
+            Rook2.Y = pieceRowLocation;
+            Rook2.boardY = pieceRow;
 
             List<Piece> pieces = new List<Piece>
             {
@@ -124,8 +159,8 @@ namespace Chess
             for (int i=0; i < 8; i++)
             {
                 Pawn pawn = new Pawn();
-                pawn.Y = pawnRow;
-                pawn.X = i;
+                pawn.Y = Padding + pawnRow * this.tileWidth;
+                pawn.X = Padding + i * this.tileWidth;
                 pieces.Add(pawn);
             }
 
@@ -171,9 +206,44 @@ namespace Chess
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-
+            int tileWidth = (GameBounds.X - Padding * 2) / 8;
             // TODO: Add your update logic here
+            var mouseState = Mouse.GetState();
+            if(mouseState.LeftButton == ButtonState.Pressed)
+            {
+                foreach (Piece piece in allPieces)
+                {
+                    Console.WriteLine(piece.name);
+                    var rect = new Rectangle(piece.X , piece.Y , tileWidth, tileWidth);
+                    if (rect.Contains(mouseState.X, mouseState.Y) && !this.PieceIsSelected)
+                    {
+                        piece.isSelected = true;
+                        this.PieceIsSelected = true;
+                    }
+                    if (piece.isSelected)
+                    {
+                        piece.X = mouseState.X - tileWidth/2;
+                        piece.Y = mouseState.Y - tileWidth/2;
+                    }
+                }
+            }
 
+            if (mouseState.LeftButton == ButtonState.Released)
+            {
+                foreach (Piece piece in allPieces)
+                {
+                    if (this.PieceIsSelected && piece.isSelected)
+                    {
+                        piece.isSelected = false;
+                        this.PieceIsSelected = false;
+                        double xLocation = (double)(mouseState.X - Padding) / (double)tileWidth;
+                        double yLocation = (double)(mouseState.Y - Padding) / (double)tileWidth;
+                        piece.X =(int)Math.Floor(xLocation) * tileWidth + Padding;
+                        piece.Y = (int)Math.Floor(yLocation) * tileWidth + Padding;
+                    }
+
+                }
+            }
             base.Update(gameTime);
         }
 
@@ -187,7 +257,6 @@ namespace Chess
             //int ytileCount = 0;
             //int xtileCount = 0;
             int tileCount = 0;
-            int tileWidth = (GameBounds.X - Padding * 2) / 8;
             //for(int i = 0; i < 8; i++)
             //{
             //    _spriteBatch.DrawString(SpriteFont.,);
@@ -196,14 +265,15 @@ namespace Chess
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    this.DrawRectangle(_spriteBatch, new Rectangle(Padding + tileWidth*j, Padding + tileWidth * i, tileWidth , tileWidth), tileCount % 2  == 0 ? Color.Wheat : Color.BurlyWood);
                     tileCount++;
-                }
-                tileCount--;
+                    this.DrawRectangle(_spriteBatch, new Rectangle(Padding + tileWidth*j, Padding + tileWidth * i, tileWidth , tileWidth), (i+j) % 2  == 0 ? Color.Wheat : Color.BurlyWood);
+
+                };
             }
             foreach(Piece piece in this.allPieces)
             {
-                _spriteBatch.Draw(piece.texture, new Rectangle(Padding + piece.X * tileWidth, Padding + piece.Y * tileWidth, tileWidth, tileWidth), Color.White);
+                //_spriteBatch.Draw(piece.texture, new Rectangle(Padding + piece.X * tileWidth, Padding + piece.Y * tileWidth, tileWidth, tileWidth), piece.isSelected ? Color.Red : Color.White);
+                piece.drawPiece(_spriteBatch, tileWidth);
             }
 
             _spriteBatch.End();
@@ -220,5 +290,6 @@ namespace Chess
                 0, Vector2.Zero, 1.0f,
                 SpriteEffects.None, 0.00001f);
         }
+
     }
 }
