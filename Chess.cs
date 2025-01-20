@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Mime;
 using System.Security.Principal;
 using Microsoft.Xna.Framework;
@@ -18,84 +19,59 @@ namespace Chess
         private int tileWidth;
         const int Padding = 20;
         private bool PieceIsSelected = false;
-        
+        private string[] pieces = [ "king", "queen", "bishop", "knight", "rook", "pawn"];
+        private List<string> drawnPieces = new List<string>();
+
+        private bool isDraging = false;
+
+        private Piece draggedPiece;
+
+        private Dictionary<string, Texture2D> pieceTextures = new(){};
+
+        private Byte[] board = new byte[64];
+
+        private string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+
+
+
 
         public Texture2D Texture;
 
         private enum Side { white, black }
-        private class Piece
-        {
-            public int X { get; set; }
-            public int Y { get; set; }
 
-            public Side side { get; set; }
-
-            public Texture2D texture { get; set; }
-
-            public string name { get; set; }
-            
-            public bool isSelected { get; set; }
-
-            public bool isDragged { get; set; }
-
-            public int boardX { get; set; }
-            public int boardY { get; set; }
-
-            public void drawPiece(SpriteBatch _spriteBatch, int tileWidth)
-            {
-                _spriteBatch.Draw(this.texture, new Rectangle(this.X, this.Y , tileWidth, tileWidth), this.isSelected ? Color.Red : Color.White);
-            }
+        private class Piece {
+            public int value { get; set; }
+            public int currentBoardLocation { get; set; }
         }
 
-        private class Pawn : Piece { 
-             public Pawn() { 
-                this.name = "pawn";
-            }  
-        }
+       
 
-        private class King : Piece
-        {
-            public King()
-            {
-                this.name = "king";
-            }
-        }
+        //private class Piece
+        //{
+        //    public int X { get; set; }
+        //    public int Y { get; set; }
 
-        private class Queen : Piece
-        {
-            public Queen()
-            {
-                this.name = "queen";
-            }
-        }
+        //    public Side side { get; set; }
 
-        private class Bishop : Piece
-        {
-            public Bishop()
-            {
-                this.name = "bishop";
-            }
-        }
+        //    public Texture2D texture { get; set; }
 
-        private class Knight : Piece
-        {
-            public Knight()
-            {
-                this.name = "bishop";
-            }
-        }
+        //    public string name { get; set; }
 
-        private class Rook : Piece
-        {
-            public Rook()
-            {
-                this.name = "rook";
-            }
-        }
+        //    public bool isSelected { get; set; }
 
-        // set up black pieces
-        List<Piece> allPieces = new List<Piece>();
- 
+        //    public bool isDragged { get; set; }
+
+        //    public int boardX { get; set; }
+        //    public int boardY { get; set; }
+
+        //    public void drawPiece(SpriteBatch _spriteBatch, int tileWidth)
+        //    {
+        //        _spriteBatch.Draw(this.texture, new Rectangle(this.X, this.Y , tileWidth, tileWidth), this.isSelected ? Color.Red : Color.White);
+        //    }
+        //}
+
+
+
         public Chess()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -104,74 +80,6 @@ namespace Chess
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             tileWidth = (GameBounds.X - Padding * 2) / 8;
-        }
-
-        private List<Piece> initilaizePieces(Side side)
-        {
-            int pieceRow = side == Side.white ? 0 : 7;
-            int pawnRow = side == Side.white ? 1 : 6;
-            int pieceRowLocation = Padding + pieceRow * tileWidth;
-            Piece King = new King();
-            King.X = Padding + 4 * tileWidth;
-            King.boardX = 4;
-            King.Y = pieceRowLocation;
-            King.boardY = pieceRow;
-            Piece Queen = new Queen();
-            Queen.X = Padding + 3 * tileWidth;
-            Queen.boardX = 3;
-            Queen.Y = pieceRowLocation;
-            Queen.boardY = pieceRow;
-            Piece Bishop = new Bishop();
-            Bishop.X = Padding + 2 * tileWidth;
-            Bishop.boardX = 2;
-            Bishop.Y = pieceRowLocation;
-            Bishop.boardY = pieceRow;
-            Piece Bishop2 = new Bishop();
-            Bishop2.X = Padding + 5 * tileWidth;
-            Bishop2.boardX = 5;
-            Bishop2.Y = pieceRowLocation;
-            Bishop2.boardY = pieceRow;
-            Piece Knight = new Knight();
-            Knight.X = Padding + 6 * tileWidth;
-            Knight.boardX = 6;  
-            Knight.Y = pieceRowLocation;
-            Knight.boardY = pieceRow;
-            Piece Knight2 = new Knight();
-            Knight2.X = Padding + 1 * tileWidth;
-            Knight2.boardX = 1;
-            Knight2.Y = pieceRowLocation;
-            Knight2.boardY = pieceRow;
-            Piece Rook = new Rook();
-            Rook.X = Padding + 7 * tileWidth;
-            Rook.boardX = 7;
-            Rook.Y = pieceRowLocation;
-            Rook.boardY = pieceRow;
-            Piece Rook2 = new Rook();
-            Rook2.X = Padding  +  0;
-            Rook2.boardX = 0;
-            Rook2.Y = pieceRowLocation;
-            Rook2.boardY = pieceRow;
-
-            List<Piece> pieces = new List<Piece>
-            {
-                King, Queen, Bishop, Bishop2, Knight, Knight2, Rook, Rook2
-            };
-            for (int i=0; i < 8; i++)
-            {
-                Pawn pawn = new Pawn();
-                pawn.Y = Padding + pawnRow * this.tileWidth;
-                pawn.X = Padding + i * this.tileWidth;
-                pieces.Add(pawn);
-            }
-
-            foreach(Piece piece in pieces)
-            {
-                piece.side = side;
-
-            }
-
-            return pieces;
-
         }
 
 
@@ -183,9 +91,10 @@ namespace Chess
                 Texture = new Texture2D(_graphics.GraphicsDevice, 1, 1);
                 Texture.SetData<Color>(new Color[] { Color.White });
             }
+            this.TranslateFen(this.fen, this.board);
 
-            this.allPieces = this.initilaizePieces(Side.white);
-            allPieces.AddRange(this.initilaizePieces(Side.black));
+            //this.allPieces = this.initilaizePieces(Side.white);
+            //allPieces.AddRange(this.initilaizePieces(Side.black));
 
             base.Initialize();
         }
@@ -196,9 +105,10 @@ namespace Chess
 
             // TODO: use this.Content to load your game content here
             //ballTexture = Content.Load<Texture2D>("ball");
-            foreach(Piece piece in this.allPieces)
+            foreach (string piece in this.pieces)
             {
-                piece.texture = Content.Load<Texture2D>($"{piece.side.ToString()}-{piece.name}");
+                this.pieceTextures.Add($"white-{piece}", Content.Load<Texture2D>($"white-{piece}"));
+                this.pieceTextures.Add($"black-{piece}", Content.Load<Texture2D>($"black-{piece}"));
             }
         }
 
@@ -206,42 +116,82 @@ namespace Chess
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-            int tileWidth = (GameBounds.X - Padding * 2) / 8;
+            //int tileWidth = (GameBounds.X - Padding * 2) / 8;
             // TODO: Add your update logic here
-            var mouseState = Mouse.GetState();
-            if(mouseState.LeftButton == ButtonState.Pressed)
+            //var mouseState = Mouse.GetState();
+            //if(mouseState.LeftButton == ButtonState.Pressed)
+            //{
+            //    foreach (Piece piece in allPieces)
+            //    {
+            //        Console.WriteLine(piece.name);
+            //        var rect = new Rectangle(piece.X , piece.Y , tileWidth, tileWidth);
+            //        if (rect.Contains(mouseState.X, mouseState.Y) && !this.PieceIsSelected)
+            //        {
+            //            piece.isSelected = true;
+            //            this.PieceIsSelected = true;
+            //        }
+            //        if (piece.isSelected)
+            //        {
+            //            piece.X = mouseState.X - tileWidth/2;
+            //            piece.Y = mouseState.Y - tileWidth/2;
+            //        }
+            //    }
+            //}
+
+            //if (mouseState.LeftButton == ButtonState.Released)
+            //{
+            //    foreach (Piece piece in allPieces)
+            //    {
+            //        if (this.PieceIsSelected && piece.isSelected)
+            //        {
+            //            piece.isSelected = false;
+            //            this.PieceIsSelected = false;
+            //            double xLocation = (double)(mouseState.X - Padding) / (double)tileWidth;
+            //            double yLocation = (double)(mouseState.Y - Padding) / (double)tileWidth;
+            //            piece.X =(int)Math.Floor(xLocation) * tileWidth + Padding;
+            //            piece.Y = (int)Math.Floor(yLocation) * tileWidth + Padding;
+            //        }
+
+            //    }
+            //}
+            MouseState msState = Mouse.GetState();
+
+            if(msState.LeftButton == ButtonState.Pressed)
             {
-                foreach (Piece piece in allPieces)
+                if (!this.isDraging)
                 {
-                    Console.WriteLine(piece.name);
-                    var rect = new Rectangle(piece.X , piece.Y , tileWidth, tileWidth);
-                    if (rect.Contains(mouseState.X, mouseState.Y) && !this.PieceIsSelected)
+                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
+                    var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
+                    if (selectePice != 0)
                     {
-                        piece.isSelected = true;
-                        this.PieceIsSelected = true;
-                    }
-                    if (piece.isSelected)
-                    {
-                        piece.X = mouseState.X - tileWidth/2;
-                        piece.Y = mouseState.Y - tileWidth/2;
+                        this.draggedPiece = new Piece();
+                        this.draggedPiece.currentBoardLocation = boardLoc;
+                        this.draggedPiece.value = selectePice;
+                        this.isDraging = true;
                     }
                 }
             }
 
-            if (mouseState.LeftButton == ButtonState.Released)
+            if (msState.LeftButton == ButtonState.Released)
             {
-                foreach (Piece piece in allPieces)
+                if (this.isDraging)
                 {
-                    if (this.PieceIsSelected && piece.isSelected)
-                    {
-                        piece.isSelected = false;
-                        this.PieceIsSelected = false;
-                        double xLocation = (double)(mouseState.X - Padding) / (double)tileWidth;
-                        double yLocation = (double)(mouseState.Y - Padding) / (double)tileWidth;
-                        piece.X =(int)Math.Floor(xLocation) * tileWidth + Padding;
-                        piece.Y = (int)Math.Floor(yLocation) * tileWidth + Padding;
+                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
+                    if (boardLoc >= 0 && boardLoc < 64) {
+                        board[this.draggedPiece.currentBoardLocation] = 0b0;
+                        board[boardLoc] = (byte)this.draggedPiece.value;
+                        
                     }
-
+                    //var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
+                    //if (selectePice != 0)
+                    //{
+                    //    this.draggedPiece = new Piece();
+                    //    this.draggedPiece.currentBoardLocation = boardLoc;
+                    //    this.draggedPiece.value = selectePice;
+                    //    this.isDraging = true;
+                    //}
+                    this.isDraging = false;
+                    this.draggedPiece = null;
                 }
             }
             base.Update(gameTime);
@@ -256,7 +206,6 @@ namespace Chess
 
             //int ytileCount = 0;
             //int xtileCount = 0;
-            int tileCount = 0;
             //for(int i = 0; i < 8; i++)
             //{
             //    _spriteBatch.DrawString(SpriteFont.,);
@@ -265,18 +214,62 @@ namespace Chess
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    tileCount++;
+                    var iP = i + 1;
+                    var jP = j + 1;
                     this.DrawRectangle(_spriteBatch, new Rectangle(Padding + tileWidth*j, Padding + tileWidth * i, tileWidth , tileWidth), (i+j) % 2  == 0 ? Color.Wheat : Color.BurlyWood);
-
-                };
+                    
+                    var boardInt = i * 8 + j;
+                    if (board[boardInt] == 0 || boardInt > 64)
+                    {
+                       continue;
+                    }
+                    var cPiece = (board[boardInt] & (byte)0b00111111);
+                    string currentPiece = this.pieces[cPiece - 1];
+                    string currentPieceColor = board[boardInt] >> 6 == (byte)0b01 ? "black" : "white";
+                    Texture2D texture = this.pieceTextures[$"{currentPieceColor}-{currentPiece}"];
+                    if (this.isDraging && this.draggedPiece.currentBoardLocation == boardInt)
+                    {
+                        _spriteBatch.Draw(texture, new Rectangle(Mouse.GetState().X - tileWidth/2, Mouse.GetState().Y - tileWidth / 2, tileWidth, tileWidth), Color.Red);
+                    }
+                    else
+                    {
+                        _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), Color.White);
+                    }
+                    
+                }
             }
-            foreach(Piece piece in this.allPieces)
+
+            for (int i = 0; i < 8; i++)
             {
-                //_spriteBatch.Draw(piece.texture, new Rectangle(Padding + piece.X * tileWidth, Padding + piece.Y * tileWidth, tileWidth, tileWidth), piece.isSelected ? Color.Red : Color.White);
-                piece.drawPiece(_spriteBatch, tileWidth);
+                for (int j = 0; j < 8; j++)
+                {
+                    var boardInt = i * 8 + j;
+                    if (board[boardInt] == 0 || boardInt > 64)
+                    {
+                        continue;
+                    }
+                    var cPiece = (board[boardInt] & (byte)0b00111111);
+                    string currentPiece = this.pieces[cPiece - 1];
+                    string currentPieceColor = board[boardInt] >> 6 == (byte)0b01 ? "black" : "white";
+                    Texture2D texture = this.pieceTextures[$"{currentPieceColor}-{currentPiece}"];
+                    if (!this.isDraging)
+                    {
+                        _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), Color.White);
+                       
+                    }
+                    else if(this.draggedPiece.currentBoardLocation == boardInt)
+                    {
+                        _spriteBatch.Draw(texture, new Rectangle(Mouse.GetState().X - tileWidth / 2, Mouse.GetState().Y - tileWidth / 2, tileWidth, tileWidth), Color.Red);
+                    }
+                }
             }
+                    //foreach(Piece piece in this.allPieces)
+                    //{
+                    //    //_spriteBatch.Draw(piece.texture, new Rectangle(Padding + piece.X * tileWidth, Padding + piece.Y * tileWidth, tileWidth, tileWidth), piece.isSelected ? Color.Red : Color.White);
+                    //    piece.drawPiece(_spriteBatch, tileWidth);
+                    //}
 
-            _spriteBatch.End();
+                    _spriteBatch.End();
 
             base.Draw(gameTime);
         }
@@ -289,6 +282,53 @@ namespace Chess
                 color * 1.0f,
                 0, Vector2.Zero, 1.0f,
                 SpriteEffects.None, 0.00001f);
+        }
+
+        private void TranslateFen(string fen, byte[] board)
+        {
+            Array.Clear(board, (byte)0, board.Length);
+            var fenVals = fen.ToCharArray();
+            var boardLocation = 0;
+            foreach (Char entry in fenVals)
+            {
+                byte boardVal = (byte)(Char.IsLower(entry) ? 0b01000000 : 0);
+                switch (Char.ToUpper(entry))
+                {
+                    case 'K':
+                        boardVal += (byte)0b00000001;
+                        break;
+                    case 'Q':
+                        boardVal += (byte)0b00000010;
+                        break;
+                    case 'B':
+                        boardVal += (byte)0b00000011;
+                        break;
+                    case 'N':
+                        boardVal += (byte)0b00000100;
+                        break;
+                    case 'R':
+                        boardVal += (byte)0b00000101;
+                        break;
+                    case 'P':
+                        boardVal += (byte)0b00000110;
+                        break;
+                    default:
+                        var entryChar = entry;
+                        if (char.IsDigit(entryChar))
+                        {
+                            boardLocation += (int)Char.GetNumericValue(entry);
+                        }
+                        continue;
+                }
+                board[boardLocation] = boardVal;
+                boardLocation++;
+
+            }
+        }
+
+        private void DrawTile(SpriteBatch _spriteBatch, byte boardVal,int X,int Y)
+        {
+          
         }
 
     }
