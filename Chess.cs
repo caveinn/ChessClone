@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -24,13 +25,17 @@ namespace Chess
 
         private bool isDraging = false;
 
-        private Piece draggedPiece;
+        private Piece slectedPiece;
 
         private Dictionary<string, Texture2D> pieceTextures = new(){};
 
         private Byte[] board = new byte[64];
 
+        private Texture2D whitedot;
+
         private string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+
+        private bool whiteTurn = true;
 
 
 
@@ -43,33 +48,6 @@ namespace Chess
             public int value { get; set; }
             public int currentBoardLocation { get; set; }
         }
-
-       
-
-        //private class Piece
-        //{
-        //    public int X { get; set; }
-        //    public int Y { get; set; }
-
-        //    public Side side { get; set; }
-
-        //    public Texture2D texture { get; set; }
-
-        //    public string name { get; set; }
-
-        //    public bool isSelected { get; set; }
-
-        //    public bool isDragged { get; set; }
-
-        //    public int boardX { get; set; }
-        //    public int boardY { get; set; }
-
-        //    public void drawPiece(SpriteBatch _spriteBatch, int tileWidth)
-        //    {
-        //        _spriteBatch.Draw(this.texture, new Rectangle(this.X, this.Y , tileWidth, tileWidth), this.isSelected ? Color.Red : Color.White);
-        //    }
-        //}
-
 
 
         public Chess()
@@ -103,57 +81,19 @@ namespace Chess
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
-            //ballTexture = Content.Load<Texture2D>("ball");
             foreach (string piece in this.pieces)
             {
                 this.pieceTextures.Add($"white-{piece}", Content.Load<Texture2D>($"white-{piece}"));
                 this.pieceTextures.Add($"black-{piece}", Content.Load<Texture2D>($"black-{piece}"));
             }
+            this.whitedot = Content.Load<Texture2D>("whitedot");
         }
 
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-            //int tileWidth = (GameBounds.X - Padding * 2) / 8;
-            // TODO: Add your update logic here
-            //var mouseState = Mouse.GetState();
-            //if(mouseState.LeftButton == ButtonState.Pressed)
-            //{
-            //    foreach (Piece piece in allPieces)
-            //    {
-            //        Console.WriteLine(piece.name);
-            //        var rect = new Rectangle(piece.X , piece.Y , tileWidth, tileWidth);
-            //        if (rect.Contains(mouseState.X, mouseState.Y) && !this.PieceIsSelected)
-            //        {
-            //            piece.isSelected = true;
-            //            this.PieceIsSelected = true;
-            //        }
-            //        if (piece.isSelected)
-            //        {
-            //            piece.X = mouseState.X - tileWidth/2;
-            //            piece.Y = mouseState.Y - tileWidth/2;
-            //        }
-            //    }
-            //}
-
-            //if (mouseState.LeftButton == ButtonState.Released)
-            //{
-            //    foreach (Piece piece in allPieces)
-            //    {
-            //        if (this.PieceIsSelected && piece.isSelected)
-            //        {
-            //            piece.isSelected = false;
-            //            this.PieceIsSelected = false;
-            //            double xLocation = (double)(mouseState.X - Padding) / (double)tileWidth;
-            //            double yLocation = (double)(mouseState.Y - Padding) / (double)tileWidth;
-            //            piece.X =(int)Math.Floor(xLocation) * tileWidth + Padding;
-            //            piece.Y = (int)Math.Floor(yLocation) * tileWidth + Padding;
-            //        }
-
-            //    }
-            //}
+         
             MouseState msState = Mouse.GetState();
 
             if(msState.LeftButton == ButtonState.Pressed)
@@ -164,9 +104,9 @@ namespace Chess
                     var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
                     if (selectePice != 0)
                     {
-                        this.draggedPiece = new Piece();
-                        this.draggedPiece.currentBoardLocation = boardLoc;
-                        this.draggedPiece.value = selectePice;
+                        this.slectedPiece = new Piece();
+                        this.slectedPiece.currentBoardLocation = boardLoc;
+                        this.slectedPiece.value = selectePice;
                         this.isDraging = true;
                     }
                 }
@@ -178,20 +118,13 @@ namespace Chess
                 {
                     var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
                     if (boardLoc >= 0 && boardLoc < 64) {
-                        board[this.draggedPiece.currentBoardLocation] = 0b0;
-                        board[boardLoc] = (byte)this.draggedPiece.value;
-                        
+                        board[this.slectedPiece.currentBoardLocation] = 0b0;
+                        board[boardLoc] = (byte)this.slectedPiece.value;
+                        this.slectedPiece.currentBoardLocation = boardLoc;
                     }
-                    //var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
-                    //if (selectePice != 0)
-                    //{
-                    //    this.draggedPiece = new Piece();
-                    //    this.draggedPiece.currentBoardLocation = boardLoc;
-                    //    this.draggedPiece.value = selectePice;
-                    //    this.isDraging = true;
-                    //}
+
                     this.isDraging = false;
-                    this.draggedPiece = null;
+                    //this.draggedPiece = null;
                 }
             }
             base.Update(gameTime);
@@ -201,15 +134,9 @@ namespace Chess
         {
             GraphicsDevice.Clear(Color.White);
 
-            // TODO: Add your drawing code here
             _spriteBatch.Begin();
 
-            //int ytileCount = 0;
-            //int xtileCount = 0;
-            //for(int i = 0; i < 8; i++)
-            //{
-            //    _spriteBatch.DrawString(SpriteFont.,);
-            //}
+          
             for (int i = 0; i < 8; i++)
             {
                 for (int j = 0; j < 8; j++)
@@ -227,7 +154,7 @@ namespace Chess
                     string currentPiece = this.pieces[cPiece - 1];
                     string currentPieceColor = board[boardInt] >> 6 == (byte)0b01 ? "black" : "white";
                     Texture2D texture = this.pieceTextures[$"{currentPieceColor}-{currentPiece}"];
-                    if (this.isDraging && this.draggedPiece.currentBoardLocation == boardInt)
+                    if (this.isDraging && this.slectedPiece.currentBoardLocation == boardInt)
                     {
                         _spriteBatch.Draw(texture, new Rectangle(Mouse.GetState().X - tileWidth/2, Mouse.GetState().Y - tileWidth / 2, tileWidth, tileWidth), Color.Red);
                     }
@@ -235,10 +162,20 @@ namespace Chess
                     {
                         _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), Color.White);
                     }
+                    if(this.slectedPiece != null)
+                    {
+                        var locations = this.GetPossibleMoveLocations();
+                        foreach(int location in locations)
+                        {
+                            this.DrawPosibbleMoves(_spriteBatch, location);
+                        }
+                        
+                    }
                     
                 }
             }
 
+             // Draw the pieces
             for (int i = 0; i < 8; i++)
             {
                 for (int j = 0; j < 8; j++)
@@ -254,22 +191,17 @@ namespace Chess
                     Texture2D texture = this.pieceTextures[$"{currentPieceColor}-{currentPiece}"];
                     if (!this.isDraging)
                     {
-                        _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), Color.White);
+                        _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), this.slectedPiece?.currentBoardLocation == boardInt ? Color.Red : Color.White);
                        
                     }
-                    else if(this.draggedPiece.currentBoardLocation == boardInt)
+                    else if(this.slectedPiece.currentBoardLocation == boardInt)
                     {
                         _spriteBatch.Draw(texture, new Rectangle(Mouse.GetState().X - tileWidth / 2, Mouse.GetState().Y - tileWidth / 2, tileWidth, tileWidth), Color.Red);
                     }
                 }
             }
-                    //foreach(Piece piece in this.allPieces)
-                    //{
-                    //    //_spriteBatch.Draw(piece.texture, new Rectangle(Padding + piece.X * tileWidth, Padding + piece.Y * tileWidth, tileWidth, tileWidth), piece.isSelected ? Color.Red : Color.White);
-                    //    piece.drawPiece(_spriteBatch, tileWidth);
-                    //}
 
-                    _spriteBatch.End();
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
@@ -283,6 +215,125 @@ namespace Chess
                 0, Vector2.Zero, 1.0f,
                 SpriteEffects.None, 0.00001f);
         }
+
+        private void DrawPosibbleMoves(SpriteBatch sb, int location)
+        {
+            int Y = location / 8;
+            int X = location % 8;
+            sb.Draw(this.whitedot, new Rectangle(Padding + (X * tileWidth) + tileWidth / 4, Padding + (Y * tileWidth)+tileWidth/4, tileWidth/2, tileWidth/2), Color.Gray * 0.03f);
+        }
+
+        private void addToListOfPossibleLocationPawn(int loc, ref List<int> locations)
+        {
+            if (this.board[loc] == 0)
+            {
+                locations.Add(loc);
+            }
+        }
+
+        private List<int> GetPossibleMoveLocations()
+        {
+            var locations = new List<int>();
+            var pieceVal = this.slectedPiece.value & 0b00001111;
+            var pieceLocation = this.slectedPiece.currentBoardLocation;
+            var pieceColor = this.slectedPiece.value >> 6;
+
+            //pawn
+            if (pieceVal == (byte)0b0110 && pieceLocation/8 != 0 && pieceLocation / 8 != 7)
+            {
+                if(pieceLocation/8 == 1)
+                {
+                    this.addToListOfPossibleLocationPawn(pieceLocation+8, ref locations);
+                    if(locations.Count > 0)
+                    this.addToListOfPossibleLocationPawn(pieceLocation+16, ref locations);
+                }
+                else if (pieceLocation / 8 == 6)
+                {
+                    this.addToListOfPossibleLocationPawn(pieceLocation - 8, ref locations);
+                    if (locations.Count > 0)
+                    this.addToListOfPossibleLocationPawn(pieceLocation - 16, ref locations);
+                }
+                else
+                {
+                    var newLoc = pieceColor == 1 ? pieceLocation + 8 : pieceLocation - 8;
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    var captureLoc1 = pieceColor == 1 ? pieceLocation + 9 : pieceLocation - 9;
+                    var captureLoc2 = pieceColor == 1 ? pieceLocation + 7 : pieceLocation - 7;
+                    if (this.board[captureLoc1] != 0  && captureLoc1 /8 != pieceLocation)
+                    {
+                        if (board[captureLoc1] >> 6 != pieceColor)
+                            locations.Add(captureLoc1);
+                    }
+                    if (this.board[captureLoc2] != 0 && captureLoc2 / 8 != pieceLocation / 8)
+                    {
+                        if (board[captureLoc1] >> 6 != pieceColor)
+                            locations.Add(captureLoc2);
+                    }
+                }
+            }
+
+            // rook
+            if(pieceVal == (byte)0b00000101)
+            {
+                var row = pieceLocation / 8;
+                var col = pieceLocation % 8;
+
+                for (int i = 1; i < 8 - row; i++ )
+                {
+                    var newLoc = pieceLocation + i * 8;
+                    if(this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                        break;
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                    {
+                        locations.Add(newLoc);
+                        break;
+                    };
+                }
+                for (int i = 1; i < row; i++)
+                {
+                    var newLoc = pieceLocation - i * 8;
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                        break;
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                    {
+                        locations.Add(newLoc);
+                        break;
+                    }
+                }
+                for (int i = col; i > 0; i--)
+                {
+                    var newLoc = pieceLocation - i ;
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                        break;
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                    {
+                        locations.Add(newLoc);
+                        break;
+                    }
+                }
+                for (int i = 1; i < 8 - col; i++)
+                {
+                    var newLoc = pieceLocation + i;
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                        break;
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                    {
+                        locations.Add(newLoc);
+                        break;
+                    }
+
+                }
+
+            }
+
+            return locations;
+        }
+
+
 
         private void TranslateFen(string fen, byte[] board)
         {
@@ -324,11 +375,6 @@ namespace Chess
                 boardLocation++;
 
             }
-        }
-
-        private void DrawTile(SpriteBatch _spriteBatch, byte boardVal,int X,int Y)
-        {
-          
         }
 
     }

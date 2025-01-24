@@ -313,6 +313,18 @@
 /processorParam:TextureFormat=Color
 /build:black-rqueen.png
 
+#begin dot2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:dot2.png
+
 #begin white-amazon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -588,4 +600,16 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:white-rqueen.png
+
+#begin whitedot.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:whitedot.png
 
