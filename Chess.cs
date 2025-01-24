@@ -21,7 +21,6 @@ namespace Chess
         const int Padding = 20;
         private bool PieceIsSelected = false;
         private string[] pieces = [ "king", "queen", "bishop", "knight", "rook", "pawn"];
-        private List<string> drawnPieces = new List<string>();
 
         private bool isDraging = false;
 
@@ -36,6 +35,8 @@ namespace Chess
         private string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
         private bool whiteTurn = true;
+
+        private List<int> possibleMoveLocations ;
 
 
 
@@ -108,6 +109,19 @@ namespace Chess
                         this.slectedPiece.currentBoardLocation = boardLoc;
                         this.slectedPiece.value = selectePice;
                         this.isDraging = true;
+                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
+                    }
+                }
+                if (this.slectedPiece != null)
+                {
+                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
+                    if (boardLoc >= 0 && boardLoc < 64 && this.possibleMoveLocations.Contains(boardLoc))
+                    {
+                        //if (boardLoc >= 0 && boardLoc < 64 )
+                        board[this.slectedPiece.currentBoardLocation] = 0b0;
+                        board[boardLoc] = (byte)this.slectedPiece.value;
+                        this.slectedPiece.currentBoardLocation = boardLoc;
+                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
                     }
                 }
             }
@@ -117,16 +131,20 @@ namespace Chess
                 if (this.isDraging)
                 {
                     var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
-                    if (boardLoc >= 0 && boardLoc < 64) {
+                    if (boardLoc >= 0 && boardLoc < 64  &&  this.possibleMoveLocations.Contains(boardLoc)) {
+                    //if (boardLoc >= 0 && boardLoc < 64 )
                         board[this.slectedPiece.currentBoardLocation] = 0b0;
                         board[boardLoc] = (byte)this.slectedPiece.value;
                         this.slectedPiece.currentBoardLocation = boardLoc;
+                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
                     }
-
+    
                     this.isDraging = false;
                     //this.draggedPiece = null;
                 }
             }
+
+
             base.Update(gameTime);
         }
 
@@ -162,15 +180,6 @@ namespace Chess
                     {
                         _spriteBatch.Draw(texture, new Rectangle(Padding + (j * tileWidth), Padding + (i * tileWidth), tileWidth, tileWidth), Color.White);
                     }
-                    if(this.slectedPiece != null)
-                    {
-                        var locations = this.GetPossibleMoveLocations();
-                        foreach(int location in locations)
-                        {
-                            this.DrawPosibbleMoves(_spriteBatch, location);
-                        }
-                        
-                    }
                     
                 }
             }
@@ -201,6 +210,13 @@ namespace Chess
                 }
             }
 
+            if (this.slectedPiece != null)
+            {
+                this.DrawPosibbleMoves(_spriteBatch);
+                
+
+            }
+
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -216,11 +232,15 @@ namespace Chess
                 SpriteEffects.None, 0.00001f);
         }
 
-        private void DrawPosibbleMoves(SpriteBatch sb, int location)
+        private void DrawPosibbleMoves(SpriteBatch sb)
         {
-            int Y = location / 8;
-            int X = location % 8;
-            sb.Draw(this.whitedot, new Rectangle(Padding + (X * tileWidth) + tileWidth / 4, Padding + (Y * tileWidth)+tileWidth/4, tileWidth/2, tileWidth/2), Color.Gray * 0.03f);
+            foreach (int location in this.possibleMoveLocations)
+            {
+                int Y = location / 8;
+                int X = location % 8;
+                sb.Draw(this.whitedot, new Rectangle(Padding + (X * tileWidth) + tileWidth / 4, Padding + (Y * tileWidth) + tileWidth / 4, tileWidth / 2, tileWidth / 2), Color.Gray);
+            }
+            
         }
 
         private void addToListOfPossibleLocationPawn(int loc, ref List<int> locations)
@@ -231,12 +251,160 @@ namespace Chess
             }
         }
 
+        private void addRookMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations)
+        {
+            var newLoc = pieceLocation;
+
+            for (int i = row + 1; i < 8; i++)
+            {
+                newLoc = i * 8 + col;
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(newLoc);
+                    break;
+                }
+
+            }
+            
+            for(int i = row - 1; i >= 0; i--)
+            {
+                newLoc = i * 8 + col;
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(newLoc);
+                    break;
+                }
+
+            }
+
+            for (int i = col + 1; i < 8; i++)
+            {
+                newLoc = row * 8 + i;
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(newLoc);
+                    break;
+                }
+
+            }
+
+            for (int i = col - 1; i >= 0; i--)
+            {
+                newLoc = row * 8 + i;
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(newLoc);
+                    break;
+                }
+
+            }
+
+        }
+
+        private void addBishopMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations)
+        {
+            int nextLoc = pieceLocation;
+
+            //first Diag positive side
+            for (int i = col + 1; i < 8; i++)
+            {
+                nextLoc = (i) + (row - (col - i)) * 8;
+                if (nextLoc > 63 || nextLoc < 0)
+                    break;
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(nextLoc);
+                    break;
+                }
+            }
+
+            Console.Write("trdy00");
+            for (int i = col - 1; i >= 0; i--)
+            {
+                nextLoc = (i) + (row + (col - i)) * 8;
+                if (nextLoc > 63 || nextLoc < 0)
+                    break;
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(nextLoc);
+                    break;
+                }
+            }
+            for (int i = col + 1; i < 8; i++)
+            {
+                nextLoc = (i) + (row + (col - i)) * 8;
+                if (nextLoc > 63 || nextLoc < 0)
+                    break;
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(nextLoc);
+                    break;
+                }
+            }
+
+            for (int i = col - 1; i >= 0; i--)
+            {
+                nextLoc = (i) + (row - (col - i)) * 8;
+                if (nextLoc > 63 || nextLoc < 0)
+                    break;
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                    break;
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
+                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                {
+                    locations.Add(nextLoc);
+                    break;
+                }
+            }
+        }
+
+        private bool checkBoardLocValid(int boardLoc)
+        {
+            if (boardLoc > 63 || boardLoc < 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private bool checkPossibleMoveToLocation(int boardLoc,int pieceColor)
+        {
+            if (boardLoc > 63 || boardLoc < 0)
+               return false;
+            if (this.board[boardLoc] != 0 && this.board[boardLoc] >> 6 == pieceColor)
+                return false;
+            return true;
+        }
+
         private List<int> GetPossibleMoveLocations()
         {
             var locations = new List<int>();
             var pieceVal = this.slectedPiece.value & 0b00001111;
             var pieceLocation = this.slectedPiece.currentBoardLocation;
             var pieceColor = this.slectedPiece.value >> 6;
+            var row = pieceLocation / 8;
+            var col = pieceLocation % 8;
 
             //pawn
             if (pieceVal == (byte)0b0110 && pieceLocation/8 != 0 && pieceLocation / 8 != 7)
@@ -275,57 +443,82 @@ namespace Chess
             // rook
             if(pieceVal == (byte)0b00000101)
             {
-                var row = pieceLocation / 8;
-                var col = pieceLocation % 8;
+                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations);
+            }
+            
+            // bishop
+            if(pieceVal == (byte)0b00000011)
+            {
+               
+                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations);              
+            }
 
-                for (int i = 1; i < 8 - row; i++ )
-                {
-                    var newLoc = pieceLocation + i * 8;
-                    if(this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
-                        break;
-                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
-                    {
-                        locations.Add(newLoc);
-                        break;
-                    };
-                }
-                for (int i = 1; i < row; i++)
-                {
-                    var newLoc = pieceLocation - i * 8;
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
-                        break;
-                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
-                    {
-                        locations.Add(newLoc);
-                        break;
-                    }
-                }
-                for (int i = col; i > 0; i--)
-                {
-                    var newLoc = pieceLocation - i ;
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
-                        break;
-                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
-                    {
-                        locations.Add(newLoc);
-                        break;
-                    }
-                }
-                for (int i = 1; i < 8 - col; i++)
-                {
-                    var newLoc = pieceLocation + i;
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
-                        break;
-                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                    if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
-                    {
-                        locations.Add(newLoc);
-                        break;
-                    }
+            // queen
+            if (pieceVal == (byte)0b00000010)
+            {
 
+                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations);
+                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations);
+            }
+
+            //  Knight
+            if ((pieceVal == (byte)0b00000100))
+            {
+                var possibleNextLocs = new List<int>();
+                
+                //down 
+                if(col < 6 && row  < 7)
+                    possibleNextLocs.Add((row + 1) * 8 + col + 2);
+                if (col < 7 && row < 6)
+                    possibleNextLocs.Add((row + 2) * 8 + col + 1);
+
+                //up
+                if (col < 6 && row > 0)
+                    possibleNextLocs.Add((row  - 1) * 8 + col + 2);
+                if (col < 7 && row > 1)
+                    possibleNextLocs.Add((row  - 2) * 8 + col + 1);
+                
+                if (col > 1 && row > 0)
+                    possibleNextLocs.Add((row - 1) * 8 + col - 2);
+                if (col > 0 && row > 1)
+                    possibleNextLocs.Add((row - 2) * 8 + col - 1);
+
+                //up
+                if (col > 1 && row < 7)
+                    possibleNextLocs.Add((row + 1) * 8 + col - 2);
+                if (col > 0 && row < 6)
+                    possibleNextLocs.Add((row + 2) * 8 + col - 1);
+
+                foreach(int loc in possibleNextLocs)
+                {
+                    if(this.checkPossibleMoveToLocation(loc, pieceColor))
+                    {
+                        locations.Add(loc);
+                    }
+                }
+
+
+
+            }
+
+            // King
+            if ((pieceVal == (byte)0b00000001))
+            {
+                var possibleNextLocs = new List<int>();
+                possibleNextLocs.Add((row + 1) * 8 + col);
+                possibleNextLocs.Add((row - 1) * 8 + col);
+                possibleNextLocs.Add((row - 1) * 8 + col - 1);
+                possibleNextLocs.Add((row + 1) * 8 + col - 1);
+                possibleNextLocs.Add((row + 1) * 8 + col + 1);
+                possibleNextLocs.Add((row - 1) * 8 + col + 1);
+                possibleNextLocs.Add((row ) * 8 + col + 1);
+                possibleNextLocs.Add((row ) * 8 + col - 1);
+                foreach (int loc in possibleNextLocs)
+                {
+                    if (this.checkPossibleMoveToLocation(loc, pieceColor))
+                    {
+                        locations.Add(loc);
+                    }
                 }
 
             }
