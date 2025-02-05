@@ -409,13 +409,13 @@ namespace Chess
             //pawn
             if (pieceVal == (byte)0b0110 && pieceLocation/8 != 0 && pieceLocation / 8 != 7)
             {
-                if(pieceLocation/8 == 1)
+                if(pieceLocation/8 == 1 && pieceColor == 1)
                 {
                     this.addToListOfPossibleLocationPawn(pieceLocation+8, ref locations);
                     if(locations.Count > 0)
                     this.addToListOfPossibleLocationPawn(pieceLocation+16, ref locations);
                 }
-                else if (pieceLocation / 8 == 6)
+                else if (pieceLocation / 8 == 6 && pieceColor == 0)
                 {
                     this.addToListOfPossibleLocationPawn(pieceLocation - 8, ref locations);
                     if (locations.Count > 0)
