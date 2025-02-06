@@ -7,6 +7,7 @@ using System.Security.Principal;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Chess
 {
@@ -16,6 +17,7 @@ namespace Chess
 
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+        private SpriteFont _spriteFont;
         private Point GameBounds = new Point(720, 720); // Game resolutions
         private int tileWidth;
         const int Padding = 20;
@@ -34,7 +36,7 @@ namespace Chess
 
         private string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
-        private bool whiteTurn = true;
+        private int colorTurn = 0;
 
         private List<int> possibleMoveLocations ;
 
@@ -81,6 +83,7 @@ namespace Chess
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _spriteFont = Content.Load<SpriteFont>("MyMenuFont");
 
             foreach (string piece in this.pieces)
             {
@@ -103,7 +106,7 @@ namespace Chess
                 {
                     var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
                     var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
-                    if (selectePice != 0)
+                    if (selectePice != 0 && selectePice >> 6 ==  colorTurn)
                     {
                         this.slectedPiece = new Piece();
                         this.slectedPiece.currentBoardLocation = boardLoc;
@@ -122,6 +125,8 @@ namespace Chess
                         board[boardLoc] = (byte)this.slectedPiece.value;
                         this.slectedPiece.currentBoardLocation = boardLoc;
                         this.possibleMoveLocations = this.GetPossibleMoveLocations();
+                        this.colorTurn = colorTurn == 0 ? 1 : 0;
+                        this.possibleMoveLocations = [];
                     }
                 }
             }
@@ -137,6 +142,8 @@ namespace Chess
                         board[boardLoc] = (byte)this.slectedPiece.value;
                         this.slectedPiece.currentBoardLocation = boardLoc;
                         this.possibleMoveLocations = this.GetPossibleMoveLocations();
+                        this.colorTurn = colorTurn == 0 ? 1 : 0;
+                        this.possibleMoveLocations = [];
                     }
     
                     this.isDraging = false;
@@ -216,6 +223,14 @@ namespace Chess
                 
 
             }
+            string output = "Hello World";
+
+            Vector2 FontOrigin = new Vector2(-Padding, Padding / 2);
+            Vector2 fontPos = new Vector2(0, Padding / 2);
+            _spriteBatch.DrawString(_spriteFont, output, fontPos, Color.Black,
+        0, FontOrigin, 1.0f, SpriteEffects.None, 0.5f);
+
+
 
             _spriteBatch.End();
 
@@ -406,6 +421,10 @@ namespace Chess
             var row = pieceLocation / 8;
             var col = pieceLocation % 8;
 
+            if (colorTurn != pieceColor) 
+            {
+                return [];
+            }
             //pawn
             if (pieceVal == (byte)0b0110 && pieceLocation/8 != 0 && pieceLocation / 8 != 7)
             {

@@ -325,6 +325,13 @@
 /processorParam:TextureFormat=Color
 /build:dot2.png
 
+#begin MyMenuFont.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:MyMenuFont.spritefont
+
 #begin white-amazon.png
 /importer:TextureImporter
 /processor:TextureProcessor
