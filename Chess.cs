@@ -99,12 +99,12 @@ namespace Chess
                 Exit();
          
             MouseState msState = Mouse.GetState();
-
-            if(msState.LeftButton == ButtonState.Pressed)
+            var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
+            if (msState.LeftButton == ButtonState.Pressed)
             {
+               
                 if (!this.isDraging)
                 {
-                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
                     var selectePice = boardLoc >= 0 && boardLoc < 64 ? board[boardLoc] : 0;
                     if (selectePice != 0 && selectePice >> 6 ==  colorTurn)
                     {
@@ -112,47 +112,44 @@ namespace Chess
                         this.slectedPiece.currentBoardLocation = boardLoc;
                         this.slectedPiece.value = selectePice;
                         this.isDraging = true;
-                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
+                        this.possibleMoveLocations = this.GetPossibleMoveLocations(this.slectedPiece.value, this.slectedPiece.currentBoardLocation);
                     }
                 }
                 if (this.slectedPiece != null)
                 {
-                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
-                    if (boardLoc >= 0 && boardLoc < 64 && this.possibleMoveLocations.Contains(boardLoc))
-                    {
-                        //if (boardLoc >= 0 && boardLoc < 64 )
-                        board[this.slectedPiece.currentBoardLocation] = 0b0;
-                        board[boardLoc] = (byte)this.slectedPiece.value;
-                        this.slectedPiece.currentBoardLocation = boardLoc;
-                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
-                        this.colorTurn = colorTurn == 0 ? 1 : 0;
-                        this.possibleMoveLocations = [];
-                    }
+                    CompletMove(boardLoc);
                 }
             }
 
             if (msState.LeftButton == ButtonState.Released)
             {
                 if (this.isDraging)
-                {
-                    var boardLoc = (msState.Y - Padding) / tileWidth * 8 + (msState.X - Padding) / tileWidth;
-                    if (boardLoc >= 0 && boardLoc < 64  &&  this.possibleMoveLocations.Contains(boardLoc)) {
-                    //if (boardLoc >= 0 && boardLoc < 64 )
-                        board[this.slectedPiece.currentBoardLocation] = 0b0;
-                        board[boardLoc] = (byte)this.slectedPiece.value;
-                        this.slectedPiece.currentBoardLocation = boardLoc;
-                        this.possibleMoveLocations = this.GetPossibleMoveLocations();
-                        this.colorTurn = colorTurn == 0 ? 1 : 0;
-                        this.possibleMoveLocations = [];
-                    }
-    
+                { 
+                    CompletMove(boardLoc);
                     this.isDraging = false;
-                    //this.draggedPiece = null;
                 }
             }
 
 
             base.Update(gameTime);
+        }
+
+        private void CompletMove( int boardLoc)
+        {
+            if (boardLoc >= 0 && boardLoc < 64 && this.possibleMoveLocations.Contains(boardLoc))
+            {
+                if (isCheck())
+                {
+                    return;
+                }
+
+                //if (boardLoc >= 0 && boardLoc < 64 )
+                board[this.slectedPiece.currentBoardLocation] = 0b0;
+                board[boardLoc] = (byte)this.slectedPiece.value;
+                this.slectedPiece.currentBoardLocation = boardLoc;
+                this.colorTurn = colorTurn == 0 ? 1 : 0;
+                this.possibleMoveLocations = [];
+            }
         }
 
         protected override void Draw(GameTime gameTime)
@@ -223,11 +220,11 @@ namespace Chess
                 
 
             }
-            string output = "Hello World";
+            string output = isCheck() ? "Check" : "Not Check";
 
             Vector2 FontOrigin = new Vector2(-Padding, Padding / 2);
             Vector2 fontPos = new Vector2(0, Padding / 2);
-            _spriteBatch.DrawString(_spriteFont, output, fontPos, Color.Black,
+            _spriteBatch.DrawString(_spriteFont, output, fontPos, Color.DarkOrchid,
         0, FontOrigin, 1.0f, SpriteEffects.None, 0.5f);
 
 
@@ -412,19 +409,14 @@ namespace Chess
             return true;
         }
 
-        private List<int> GetPossibleMoveLocations()
+        private List<int> GetPossibleMoveLocations(int piece, int pieceLocation)
         {
             var locations = new List<int>();
-            var pieceVal = this.slectedPiece.value & 0b00001111;
-            var pieceLocation = this.slectedPiece.currentBoardLocation;
-            var pieceColor = this.slectedPiece.value >> 6;
+            var pieceVal = piece & 0b00001111;
+            var pieceColor = piece >> 6;
             var row = pieceLocation / 8;
             var col = pieceLocation % 8;
 
-            if (colorTurn != pieceColor) 
-            {
-                return [];
-            }
             //pawn
             if (pieceVal == (byte)0b0110 && pieceLocation/8 != 0 && pieceLocation / 8 != 7)
             {
@@ -545,7 +537,29 @@ namespace Chess
             return locations;
         }
 
+        private bool isCheck()
+        {
+            //check possible moves of all of the oponents pieces and see if the kings location is in any of them.
+            var kingVal = colorTurn == 0 ? 1 : 0b01000001;
+            int kingLocation = Array.FindIndex(board, x => x == (byte)kingVal);
+            int boardLocation = 0;
+            foreach(int piece in board)
+            {
+                if(piece >> 6 != colorTurn)
+                {
+                    var possibleLocations = this.GetPossibleMoveLocations(piece, boardLocation);
+                    if (possibleLocations.Contains(kingLocation))
+                    {
+                        return true;
+                    }
 
+                }
+                boardLocation++;
+            }
+
+            return false;
+
+        }
 
         private void TranslateFen(string fen, byte[] board)
         {
