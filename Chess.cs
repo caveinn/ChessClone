@@ -144,7 +144,9 @@ namespace Chess
                 }
 
                 //if (boardLoc >= 0 && boardLoc < 64 )
-                board[this.slectedPiece.currentBoardLocation] = 0b0;
+                var boardCopy = this.board;
+                boardCopy[this.slectedPiece.currentBoardLocation] = 0;
+                board[this.slectedPiece.currentBoardLocation] = 0;
                 board[boardLoc] = (byte)this.slectedPiece.value;
                 this.slectedPiece.currentBoardLocation = boardLoc;
                 this.colorTurn = colorTurn == 0 ? 1 : 0;
