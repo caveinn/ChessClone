@@ -110,9 +110,12 @@ namespace Chess
                     {
                         this.slectedPiece = new Piece();
                         this.slectedPiece.currentBoardLocation = boardLoc;
+                        
                         this.slectedPiece.value = selectePice;
                         this.isDraging = true;
-                        this.possibleMoveLocations = this.GetPossibleMoveLocations(this.slectedPiece.value, this.slectedPiece.currentBoardLocation);
+                        var nextLocations = this.GetPossibleMoveLocations(this.slectedPiece.value, this.slectedPiece.currentBoardLocation, this.board);
+                        nextLocations = CleanPossibleLocation(nextLocations, (byte)this.slectedPiece.value, this.slectedPiece.currentBoardLocation, this.board);
+                        this.possibleMoveLocations = nextLocations;
                     }
                 }
                 if (this.slectedPiece != null)
@@ -134,15 +137,29 @@ namespace Chess
             base.Update(gameTime);
         }
 
+        private List<int> CleanPossibleLocation(List<int> locations, byte pieceVal, int pieceLocation, byte[] boardToCheck)
+        {
+            byte[] tempBoard = new byte[64];
+            
+            List<int> tempLocations = new List<int>(locations); 
+            foreach (int location in tempLocations)
+            {
+                Array.Copy(boardToCheck, tempBoard, 64);
+                tempBoard[pieceLocation] = 0;
+                tempBoard[location] = pieceVal;
+                if (isCheck(tempBoard, this.colorTurn))
+                {  
+                    locations.Remove(location);
+                }
+            }
+            return locations;
+        }
+
         private void CompletMove( int boardLoc)
         {
             if (boardLoc >= 0 && boardLoc < 64 && this.possibleMoveLocations.Contains(boardLoc))
             {
-                if (isCheck())
-                {
-                    return;
-                }
-
+                
                 //if (boardLoc >= 0 && boardLoc < 64 )
                 var boardCopy = this.board;
                 boardCopy[this.slectedPiece.currentBoardLocation] = 0;
@@ -222,7 +239,8 @@ namespace Chess
                 
 
             }
-            string output = isCheck() ? "Check" : "Not Check";
+            string output = isCheck(this.board, colorTurn) ? "Check" : "Not Check";
+            output = isCheckmate(this.board, colorTurn) ? "Checkmate" : output;
 
             Vector2 FontOrigin = new Vector2(-Padding, Padding / 2);
             Vector2 fontPos = new Vector2(0, Padding / 2);
@@ -257,25 +275,25 @@ namespace Chess
             
         }
 
-        private void addToListOfPossibleLocationPawn(int loc, ref List<int> locations)
+        private void addToListOfPossibleLocationPawn(int loc, ref List<int> locations, byte[] newBoardToCheck)
         {
-            if (this.board[loc] == 0)
+            if (newBoardToCheck[loc] == 0)
             {
                 locations.Add(loc);
             }
         }
 
-        private void addRookMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations)
+        private void addRookMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations, byte[] newBoardToCheck)
         {
             var newLoc = pieceLocation;
 
             for (int i = row + 1; i < 8; i++)
             {
                 newLoc = i * 8 + col;
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 != pieceColor)
                 {
                     locations.Add(newLoc);
                     break;
@@ -286,10 +304,10 @@ namespace Chess
             for(int i = row - 1; i >= 0; i--)
             {
                 newLoc = i * 8 + col;
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 != pieceColor)
                 {
                     locations.Add(newLoc);
                     break;
@@ -300,10 +318,10 @@ namespace Chess
             for (int i = col + 1; i < 8; i++)
             {
                 newLoc = row * 8 + i;
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 != pieceColor)
                 {
                     locations.Add(newLoc);
                     break;
@@ -314,10 +332,10 @@ namespace Chess
             for (int i = col - 1; i >= 0; i--)
             {
                 newLoc = row * 8 + i;
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(newLoc, ref locations);
-                if (this.board[newLoc] != 0 && this.board[newLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(newLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[newLoc] != 0 && newBoardToCheck[newLoc] >> 6 != pieceColor)
                 {
                     locations.Add(newLoc);
                     break;
@@ -327,7 +345,7 @@ namespace Chess
 
         }
 
-        private void addBishopMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations)
+        private void addBishopMovement(int row, int col, int pieceColor, int pieceLocation, ref List<int> locations, byte[] newBoardToCheck)
         {
             int nextLoc = pieceLocation;
 
@@ -337,10 +355,10 @@ namespace Chess
                 nextLoc = (i) + (row - (col - i)) * 8;
                 if (nextLoc > 63 || nextLoc < 0)
                     break;
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 != pieceColor)
                 {
                     locations.Add(nextLoc);
                     break;
@@ -353,10 +371,10 @@ namespace Chess
                 nextLoc = (i) + (row + (col - i)) * 8;
                 if (nextLoc > 63 || nextLoc < 0)
                     break;
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 != pieceColor)
                 {
                     locations.Add(nextLoc);
                     break;
@@ -367,10 +385,10 @@ namespace Chess
                 nextLoc = (i) + (row + (col - i)) * 8;
                 if (nextLoc > 63 || nextLoc < 0)
                     break;
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 != pieceColor)
                 {
                     locations.Add(nextLoc);
                     break;
@@ -382,10 +400,10 @@ namespace Chess
                 nextLoc = (i) + (row - (col - i)) * 8;
                 if (nextLoc > 63 || nextLoc < 0)
                     break;
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 == pieceColor)
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 == pieceColor)
                     break;
-                this.addToListOfPossibleLocationPawn(nextLoc, ref locations);
-                if (this.board[nextLoc] != 0 && this.board[nextLoc] >> 6 != pieceColor)
+                this.addToListOfPossibleLocationPawn(nextLoc, ref locations, newBoardToCheck);
+                if (newBoardToCheck[nextLoc] != 0 && newBoardToCheck[nextLoc] >> 6 != pieceColor)
                 {
                     locations.Add(nextLoc);
                     break;
@@ -402,16 +420,16 @@ namespace Chess
             return true;
         }
 
-        private bool checkPossibleMoveToLocation(int boardLoc,int pieceColor)
+        private bool checkPossibleMoveToLocation(int boardLoc,int pieceColor, byte[] newBoardToCheck)
         {
             if (boardLoc > 63 || boardLoc < 0)
                return false;
-            if (this.board[boardLoc] != 0 && this.board[boardLoc] >> 6 == pieceColor)
+            if (newBoardToCheck[boardLoc] != 0 && newBoardToCheck[boardLoc] >> 6 == pieceColor)
                 return false;
             return true;
         }
 
-        private List<int> GetPossibleMoveLocations(int piece, int pieceLocation)
+        private List<int> GetPossibleMoveLocations(int piece, int pieceLocation, byte[] newBoardToCheck)
         {
             var locations = new List<int>();
             var pieceVal = piece & 0b00001111;
@@ -424,28 +442,28 @@ namespace Chess
             {
                 if(pieceLocation/8 == 1 && pieceColor == 1)
                 {
-                    this.addToListOfPossibleLocationPawn(pieceLocation+8, ref locations);
+                    this.addToListOfPossibleLocationPawn(pieceLocation+8, ref locations, newBoardToCheck);
                     if(locations.Count > 0)
-                    this.addToListOfPossibleLocationPawn(pieceLocation+16, ref locations);
+                    this.addToListOfPossibleLocationPawn(pieceLocation+16, ref locations, newBoardToCheck);
                 }
                 else if (pieceLocation / 8 == 6 && pieceColor == 0)
                 {
-                    this.addToListOfPossibleLocationPawn(pieceLocation - 8, ref locations);
+                    this.addToListOfPossibleLocationPawn(pieceLocation - 8, ref locations, newBoardToCheck);
                     if (locations.Count > 0)
-                    this.addToListOfPossibleLocationPawn(pieceLocation - 16, ref locations);
+                    this.addToListOfPossibleLocationPawn(pieceLocation - 16, ref locations, newBoardToCheck);
                 }
                 else
                 {
                     var newLoc = pieceColor == 1 ? pieceLocation + 8 : pieceLocation - 8;
-                    this.addToListOfPossibleLocationPawn(newLoc, ref locations);
+                    this.addToListOfPossibleLocationPawn(newLoc, ref locations, newBoardToCheck);
                     var captureLoc1 = pieceColor == 1 ? pieceLocation + 9 : pieceLocation - 9;
                     var captureLoc2 = pieceColor == 1 ? pieceLocation + 7 : pieceLocation - 7;
-                    if (this.board[captureLoc1] != 0  && captureLoc1 /8 != pieceLocation)
+                    if (newBoardToCheck[captureLoc1] != 0  && captureLoc1 /8 != pieceLocation)
                     {
                         if (board[captureLoc1] >> 6 != pieceColor)
                             locations.Add(captureLoc1);
                     }
-                    if (this.board[captureLoc2] != 0 && captureLoc2 / 8 != pieceLocation / 8)
+                    if (newBoardToCheck[captureLoc2] != 0 && captureLoc2 / 8 != pieceLocation / 8)
                     {
                         if (board[captureLoc1] >> 6 != pieceColor)
                             locations.Add(captureLoc2);
@@ -456,22 +474,22 @@ namespace Chess
             // rook
             if(pieceVal == (byte)0b00000101)
             {
-                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations);
+                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations, newBoardToCheck);
             }
             
             // bishop
             if(pieceVal == (byte)0b00000011)
             {
                
-                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations);              
+                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations, newBoardToCheck);              
             }
 
             // queen
             if (pieceVal == (byte)0b00000010)
             {
 
-                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations);
-                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations);
+                this.addBishopMovement(row, col, pieceColor, pieceLocation, ref locations, newBoardToCheck);
+                this.addRookMovement(row, col, pieceColor, pieceLocation, ref locations, newBoardToCheck);
             }
 
             //  Knight
@@ -504,7 +522,7 @@ namespace Chess
 
                 foreach(int loc in possibleNextLocs)
                 {
-                    if(this.checkPossibleMoveToLocation(loc, pieceColor))
+                    if(this.checkPossibleMoveToLocation(loc, pieceColor,newBoardToCheck))
                     {
                         locations.Add(loc);
                     }
@@ -528,7 +546,7 @@ namespace Chess
                 possibleNextLocs.Add((row ) * 8 + col - 1);
                 foreach (int loc in possibleNextLocs)
                 {
-                    if (this.checkPossibleMoveToLocation(loc, pieceColor))
+                    if (this.checkPossibleMoveToLocation(loc, pieceColor, newBoardToCheck))
                     {
                         locations.Add(loc);
                     }
@@ -539,17 +557,58 @@ namespace Chess
             return locations;
         }
 
-        private bool isCheck()
+        private bool isCheckmate(byte[] newBoard, int newcolorTurn)
+        {
+            byte[] tempBoard = new byte[64];
+            if(isCheck(newBoard, newcolorTurn))
+            {
+                int boardLocation = 0;
+                foreach(int piece in newBoard)
+                {
+                    Array.Copy(newBoard, tempBoard, 64);
+                    //check moving all my pieces still remains check
+                    if (piece >> 6 == newcolorTurn)
+                    {
+                        var possibleMoves = this.GetPossibleMoveLocations(piece, boardLocation, newBoard);
+                        possibleMoves = CleanPossibleLocation(possibleMoves, (byte)piece, boardLocation, tempBoard);
+                        if (possibleMoves.Count > 0)
+                        {
+                            return false;
+                        }
+
+                        //foreach (int move in possibleMoveLocations)
+                        //{
+                        //    Array.Copy(newBoard, tempBoard, 64);
+                        //    tempBoard[boardLocation] = 0;
+                        //    tempBoard[move] = 
+                        //    possibleMoves = CleanPossibleLocation(possibleMoveLocations, (byte)piece, move, tempBoard);
+                        //    if (possibleMoveLocations.Count > 0)
+                        //    {
+                        //        return false;
+                        //    }
+
+                        //}
+                    }
+
+                boardLocation++;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool isCheck(byte[] newBoard, int newcolorTurn)
         {
             //check possible moves of all of the oponents pieces and see if the kings location is in any of them.
-            var kingVal = colorTurn == 0 ? 1 : 0b01000001;
-            int kingLocation = Array.FindIndex(board, x => x == (byte)kingVal);
+            var kingVal = newcolorTurn == 0 ? 1 : 0b01000001;
+            int kingLocation = Array.FindIndex(newBoard, x => x == (byte)kingVal);
             int boardLocation = 0;
-            foreach(int piece in board)
+            foreach(int piece in newBoard)
             {
-                if(piece >> 6 != colorTurn)
+                //if piece is not current player
+                if(piece >> 6 != newcolorTurn)
                 {
-                    var possibleLocations = this.GetPossibleMoveLocations(piece, boardLocation);
+                    var possibleLocations = this.GetPossibleMoveLocations(piece, boardLocation, newBoard);
                     if (possibleLocations.Contains(kingLocation))
                     {
                         return true;
